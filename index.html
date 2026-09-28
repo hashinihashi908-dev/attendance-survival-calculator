@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Attendance Survival Calculator</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--ink:#1c1b19;--mut:#6b675f;--line:#e2dfd6;--ok:#1b7a4b;--warn:#b26a00;--bad:#c62828;--acc:#2b4acb;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15140f;--card:#1f1e18;--ink:#f0eee6;--mut:#a09b8f;--line:#33312a;--ok:#4cc38a;--warn:#f0a63a;--bad:#ff6b6b;--acc:#7f97ff}}
+:root[data-theme="dark"]{--bg:#15140f;--card:#1f1e18;--ink:#f0eee6;--mut:#a09b8f;--line:#33312a;--ok:#4cc38a;--warn:#f0a63a;--bad:#ff6b6b;--acc:#7f97ff}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:1.7rem;margin:.2em 0}
+.sub{color:var(--mut);margin:0 0 20px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+label{display:block;font-size:.85rem;color:var(--mut);margin-bottom:4px}
+select,input{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.subj{display:grid;grid-template-columns:1fr 110px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.subj:last-child{border:0}
+.tt{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.85rem}
+td,th{border:1px solid var(--line);padding:6px 8px;text-align:left;white-space:nowrap}
+.res{border-left:6px solid var(--ok)}
+.res.warn{border-color:var(--warn)}.res.bad{border-color:var(--bad)}
+.res h3{margin:0 0 6px}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:8px 0}
+.kv div{background:var(--bg);border-radius:8px;padding:8px}
+.kv b{display:block;font-size:1.25rem}
+.kv span{font-size:.75rem;color:var(--mut)}
+.alert{background:var(--bad);color:#fff;border-radius:10px;padding:14px;font-weight:800;font-size:1.15rem;text-align:center;letter-spacing:.03em;margin:8px 0;animation:p 1s infinite}
+@keyframes p{50%{opacity:.65;transform:scale(.99)}}
+@media (prefers-reduced-motion:reduce){.alert{animation:none}}
+.note{font-size:.8rem;color:var(--mut)}
+
+.charts{display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:center}
+@media(max-width:560px){.charts{grid-template-columns:1fr}}
+.bar{display:grid;grid-template-columns:96px 1fr 48px;gap:8px;align-items:center;font-size:.85rem;margin:6px 0}
+.track{position:relative;height:16px;background:var(--bg);border-radius:8px;overflow:visible}
+.fill{height:100%;border-radius:8px}
+.mk{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.6}
+.leg{font-size:.75rem;color:var(--mut)}
+.chip{display:inline-flex;gap:6px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:3px 10px;margin:3px;font-size:.8rem}
+.chip button{border:0;background:none;color:var(--bad);cursor:pointer;font-size:1rem}
+.btn{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:10px 14px;font:inherit;cursor:pointer}
+#fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:60px;height:60px;border-radius:50%;font-size:1.6rem;box-shadow:0 4px 14px rgba(0,0,0,.3);z-index:20}
+#chat{position:fixed;right:16px;bottom:calc(88px + env(safe-area-inset-bottom,0px));width:min(380px,calc(100vw - 32px));height:min(520px,70vh);background:var(--card);border:1px solid var(--line);border-radius:14px;display:none;flex-direction:column;box-shadow:0 8px 30px rgba(0,0,0,.3);z-index:20}
+#chat.open{display:flex}
+#chat header{padding:10px 14px;border-bottom:1px solid var(--line);font-weight:700}
+#msgs{flex:1;overflow-y:auto;padding:10px}
+.m{max-width:88%;padding:8px 12px;border-radius:12px;margin:6px 0;white-space:pre-wrap;font-size:.9rem}
+.m.u{background:var(--acc);color:#fff;margin-left:auto}.m.b{background:var(--bg)}
+#chat form{display:flex;gap:6px;padding:8px;border-top:1px solid var(--line)}
+</style></head><body><main>
+<h1>Attendance Survival Calculator</h1>
+<p class="sub">Charts, leave simulator and an AI advisor included. Pick your section, enter your current attendance per subject, see exactly what you must attend.</p>
+
+<div class="panel">
+ <div class="row">
+  <div><label>Class section</label><select id="sec"></select></div>
+  <div><label>Danger-zone limit (%)</label><input id="lim" type="number" value="75" min="1" max="100"></div>
+  <div><label>Target (%)</label><input id="tgt" type="number" value="90" min="1" max="100"></div>
+  <div><label>Semester ends (before Nov)</label><input id="end" type="date" value="2026-10-31"></div>
+  <div><label>Semester started</label><input id="start" type="date" value="2026-08-03"></div>
+  <div><label>Holidays (comma dates)</label><input id="hol" value="2026-10-02,2026-10-20"></div>
+ </div>
+</div>
+
+<div class="panel"><b>Weekly timetable</b><div class="tt" id="tt"></div>
+ <p class="note">Demo timetable: replace the SCHEDULE data in the script with your real Drive dataset.</p></div>
+
+<div class="panel"><b>Your current attendance % per subject</b><div id="subs"></div></div>
+<div id="ovw" class="panel" style="display:none"><b>Attendance health</b><div class="charts" id="charts"></div></div>
+<div id="out"></div>
+<div class="panel"><b>OD / Medical / Leave simulator</b>
+ <p class="note">OD counts as present. Medical (with certificate) is condoned, so it is removed from total classes. Absent counts as missed.</p>
+ <div class="row"><div><label>Type</label><select id="lt"><option>Absent</option><option>OD</option><option>Medical</option></select></div>
+ <div><label>Start date</label><input id="ls" type="date"></div><div><label>Days</label><input id="ld" type="number" value="1" min="1" max="60"></div>
+ <div><label>&nbsp;</label><button class="btn" id="la" type="button">Add leave</button></div></div>
+ <div id="ll"></div></div>
+<div class="panel"><button class="btn" id="dl" type="button">Download CSV report</button></div>
+<button class="btn" id="fab" type="button" aria-label="Attendance Advisor">💬</button>
+<div id="chat"><header>Attendance Advisor</header><div id="msgs"></div>
+<form id="cf"><input id="ci" placeholder="e.g. 3-day sick leave from tomorrow, Chemistry?" autocomplete="off"><button class="btn">Send</button></form></div>
+
+
+<script>
+const SUBJ=["Mathematics","Physics","Chemistry","Programming","English","Electronics"];
+const SECS="ABCDEFGHIJ".split("").map(c=>"Section "+c);
+const BASE=[[0,1,2,3,4],[1,3,0,5,2],[2,0,4,1,3],[3,5,1,0,4],[4,2,5,3,0]];
+const DAYS=["Mon","Tue","Wed","Thu","Fri"];
+// SCHEDULE[section][day] = array of subject indices. Swap with real data.
+const SCHEDULE=SECS.map((_,s)=>BASE.map(day=>day.map((_,p)=>(day[(p+s)%5]+s)%6)));
+const $=id=>document.getElementById(id);
+$("sec").innerHTML=SECS.map((s,i)=>`<option value="${i}">${s}</option>`).join("");
+function ymd(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function parse(s){const[a,b,c]=s.split("-").map(Number);return new Date(a,b-1,c)}
+function counts(){
+ const s=+$("sec").value,hol=new Set($("hol").value.split(",").map(x=>x.trim()));
+ const st=parse($("start").value),en=parse($("end").value),t=new Date();t.setHours(0,0,0,0);
+ const held=Array(6).fill(0),rem=Array(6).fill(0);
+ for(let d=new Date(st);d<=en;d.setDate(d.getDate()+1)){
+  const w=d.getDay();if(w<1||w>5||hol.has(ymd(d)))continue;
+  SCHEDULE[s][w-1].forEach(x=>(d<t?held:rem)[x]++);
+ }
+ return{held,rem};
+}
+function drawTT(){
+ const s=+$("sec").value;
+ $("tt").innerHTML="<table><tr><th></th>"+[1,2,3,4,5].map(p=>`<th>P${p}</th>`).join("")+"</tr>"+
+ DAYS.map((d,i)=>`<tr><th>${d}</th>`+SCHEDULE[s][i].map(x=>`<td>${SUBJ[x]}</td>`).join("")+"</tr>").join("")+"</table>";
+}
+function drawInputs(){
+ const old=[...document.querySelectorAll(".pct")].map(i=>i.value);
+ $("subs").innerHTML=SUBJ.map((n,i)=>`<div class="subj"><span>${n}</span><input class="pct" type="number" min="0" max="100" step="0.1" placeholder="%" value="${old[i]||""}"></div>`).join("");
+ document.querySelectorAll(".pct").forEach(i=>i.oninput=calc);
+}
+let leaves=[],hist=[];
+const DAY=864e5,today=()=>{const t=new Date();t.setHours(0,0,0,0);return t};
+const addD=(d,n)=>new Date(d.getTime()+n*DAY+(d.getHours()?0:0));
+function rangeCounts(startStr,days){
+ const s=+$("sec").value,hol=new Set($("hol").value.split(",").map(x=>x.trim())),en=parse($("end").value),t=today();
+ const c=Array(6).fill(0),d=parse(startStr);
+ for(let k=0;k<days;k++,d.setDate(d.getDate()+1)){if(d<t||d>en)continue;const w=d.getDay();if(w<1||w>5||hol.has(ymd(d)))continue;SCHEDULE[s][w-1].forEach(x=>c[x]++)}
+ return c}
+const leaveCounts=l=>rangeCounts(l.start,l.days);
+function eff(i,pct,ls,held,rem){
+ let a=pct/100*held[i],od=0,med=0,ab=0;
+ ls.forEach(l=>{const c=leaveCounts(l)[i];if(l.type==="OD")od+=c;else if(l.type==="Medical")med+=c;else ab+=c});
+ const T=Math.max(1,held[i]+rem[i]-med);a+=od;
+ return{a,T,free:Math.max(0,rem[i]-od-med-ab),od,med,ab}}
+const need=(e,g)=>{const x=Math.max(0,Math.ceil(g/100*e.T-e.a-1e-9));return{x,ok:x<=e.free}};
+const best=e=>(e.a+e.free)/e.T*100;
+const col=p=>p<+$("lim").value?"var(--bad)":p<+$("tgt").value?"var(--warn)":"var(--ok)";
+function state(ls=leaves){
+ const{held,rem}=counts(),ins=document.querySelectorAll(".pct");
+ return SUBJ.map((n,i)=>ins[i].value===""?null:{i,n,p:+ins[i].value,held:held[i],rem:rem[i],e:eff(i,+ins[i].value,ls,held,rem)}).filter(Boolean)}
+function calc(){
+ const lim=+$("lim").value,tgt=+$("tgt").value,S=state();let html="";
+ S.forEach(o=>{
+  const e=o.e,n1=need(e,lim),n2=need(e,tgt),cls=!n1.ok?"bad":(n1.x>0?"warn":"");let msg;
+  if(!n1.ok)msg=`<div class="alert">⚠ IRREVERSIBLE DETENTION ⚠<br><small>Even attending all ${e.free} classes still open to you, you cannot reach ${lim}% before the semester ends.</small></div>`;
+  else if(n1.x===0)msg=`<p>✅ Safe at ${lim}%. You can skip up to <b>${e.free-n1.x}</b> of the remaining classes and stay above it.</p>`;
+  else msg=`<p>Attend <b>${n1.x}</b> of the ${e.free} classes open to you to escape the danger zone.</p>`;
+  const m2=n2.x===0?`Already on track for ${tgt}%.`:n2.ok?`Attend <b>${n2.x}</b> of ${e.free} to reach ${tgt}%.`:`${tgt}% is out of reach (best possible ${best(e).toFixed(1)}%).`;
+  html+=`<div class="panel res ${cls}"><h3>${o.n}</h3><div class="kv"><div><b>${o.p}%</b><span>current</span></div><div><b>${o.held}</b><span>held</span></div><div><b>${o.rem}</b><span>left</span></div><div><b>${n1.ok?n1.x:"—"}</b><span>must attend (${lim}%)</span></div><div><b>${best(e).toFixed(1)}%</b><span>best final</span></div></div>${msg}<p class="note">${m2}${e.od+e.med+e.ab?` Leaves applied: ${e.od} OD, ${e.med} medical, ${e.ab} absent classes.`:""}</p></div>`});
+ $("out").innerHTML=html;
+ $("ovw").style.display=S.length?"block":"none";
+ if(S.length){
+  const ta=S.reduce((s,o)=>s+o.p/100*o.held,0),th=S.reduce((s,o)=>s+o.held,0),ov=th?ta/th*100:0,pj=S.reduce((s,o)=>s+o.e.a+o.e.free,0)/S.reduce((s,o)=>s+o.e.T,0)*100,C=339.29;
+  $("charts").innerHTML=`<div style="text-align:center"><svg viewBox="0 0 140 140" width="180" role="img" aria-label="Overall attendance ${ov.toFixed(1)}%"><circle cx="70" cy="70" r="54" fill="none" stroke="var(--line)" stroke-width="16"/><circle cx="70" cy="70" r="54" fill="none" stroke="${col(ov)}" stroke-width="16" stroke-dasharray="${ov/100*C} ${C}" transform="rotate(-90 70 70)" stroke-linecap="round"/><text x="70" y="68" text-anchor="middle" font-size="24" font-weight="700" fill="var(--ink)">${ov.toFixed(1)}%</text><text x="70" y="88" text-anchor="middle" font-size="10" fill="var(--mut)">overall now</text></svg><div class="leg">Best-case final: <b>${pj.toFixed(1)}%</b></div></div><div>`+
+  S.map(o=>`<div class="bar"><span>${o.n}</span><div class="track"><div class="fill" style="width:${Math.min(100,o.p)}%;background:${col(o.p)}"></div><div class="mk" style="left:${lim}%"></div><div class="mk" style="left:${tgt}%;opacity:.3"></div></div><b>${o.p}%</b></div>`).join("")+`<div class="leg">Bars = current %. Dark line = ${lim}% limit, faint line = ${tgt}% target. Green safe, amber below target, red danger.</div></div>`}
+}
+function drawLeaves(){$("ll").innerHTML=leaves.map((l,k)=>`<span class="chip">${l.type}: ${l.start}, ${l.days}d<button type="button" data-k="${k}" aria-label="remove">×</button></span>`).join("");
+ $("ll").querySelectorAll("button").forEach(b=>b.onclick=()=>{leaves.splice(+b.dataset.k,1);drawLeaves();calc()})}
+$("ls").value=ymd(new Date(today().getTime()+DAY));
+$("la").onclick=()=>{leaves.push({type:$("lt").value,start:$("ls").value,days:Math.max(1,+$("ld").value||1)});drawLeaves();calc()};
+$("dl").onclick=async()=>{
+ const rows=[["Subject","Current %","Held","Left","Must attend for limit","Best final %"]];
+ state().forEach(o=>{const n=need(o.e,+$("lim").value);rows.push([o.n,o.p,o.held,o.rem,n.ok?n.x:"IRREVERSIBLE DETENTION",best(o.e).toFixed(1)])});
+ try{const d=await claude.use("downloads");if(d)await d.save({filename:"attendance-report.csv",data:rows.map(r=>r.join(",")).join("\n")})}catch(e){}};
+/* Advisor chatbot */
+function sim(a){
+ const off=Math.max(0,a.startOffsetDays||0),l={type:a.type||"Absent",start:ymd(new Date(today().getTime()+off*DAY)),days:Math.max(1,a.days||1)},
+  lim=+$("lim").value,bf=state(),af=state([...leaves,l]),pre=rangeCounts(ymd(today()),off),lc=leaveCounts(l),out=[];
+ bf.forEach(o=>{
+  if(a.subject&&!o.n.toLowerCase().includes(String(a.subject).toLowerCase()))return;
+  const e2=af.find(x=>x.i===o.i).e,ae=o.p/100*o.held+pre[o.i]+(l.type==="OD"?lc[o.i]:0),te=o.held+pre[o.i]+lc[o.i]-(l.type==="Medical"?lc[o.i]:0),nb=need(o.e,lim),na=need(e2,lim);
+  out.push({subject:o.n,currentPercent:o.p,leaveType:l.type,classesInLeaveWindow:lc[o.i],percentRightAfterLeave_ifAllOtherClassesAttendedBefore:+(ae/te*100).toFixed(1),bestPossibleFinalBefore:+best(o.e).toFixed(1),bestPossibleFinalAfter:+best(e2).toFixed(1),mustAttendBefore:nb.ok?nb.x:null,mustAttendAfter:na.ok?na.x:null,classesStillOpenAfter:e2.free,irreversibleDetentionAfter:!na.ok,limit:lim})});
+ return out}
+function localBot(q){
+ const S=state();if(!S.length)return "Please enter your attendance percentages first, then ask me again.";
+ const t=q.toLowerCase(),sub=S.find(o=>t.includes(o.n.toLowerCase())),m=t.match(/(\d+)[\s-]*day/),
+  r=sim({subject:sub&&sub.n,days:m?+m[1]:1,startOffsetDays:t.includes("tomorrow")?1:0,type:/\bod\b|on.?duty/.test(t)?"OD":/medical|certificate/.test(t)?"Medical":"Absent"});
+ return r.map(x=>`${x.subject}: ${x.leaveType} affects ${x.classesInLeaveWindow} classes. Right after it you'd be at ~${x.percentRightAfterLeave_ifAllOtherClassesAttendedBefore}%${x.percentRightAfterLeave_ifAllOtherClassesAttendedBefore<x.limit?" ⚠ below "+x.limit+"%":""}. ${x.irreversibleDetentionAfter?"🚨 IRREVERSIBLE DETENTION: "+x.limit+"% is no longer reachable.":x.mustAttendAfter===0?"You'd still be safe.":"You'd then need to attend "+x.mustAttendAfter+" of "+x.classesStillOpenAfter+" open classes."}`).join("\n\n")}
+function say(t,c){const d=document.createElement("div");d.className="m "+c;d.textContent=t;$("msgs").appendChild(d);$("msgs").scrollTop=1e9;return d}
+$("fab").onclick=()=>{$("chat").classList.toggle("open");if(!$("msgs").children.length)say("Hi! I read your dashboard. Ask e.g. “If I take a 3-day sick leave starting tomorrow, will Chemistry drop below 75%?”","b")};
+$("cf").onsubmit=async e=>{
+ e.preventDefault();const q=$("ci").value.trim();if(!q)return;$("ci").value="";say(q,"u");hist.push({role:"user",content:q});
+ const b=say("Thinking…","b");let reply;
+ try{
+  const S=await claude.use("sample");if(!S)throw 0;
+  const ctx=JSON.stringify({today:ymd(today()),semesterEnd:$("end").value,limitPercent:+$("lim").value,targetPercent:+$("tgt").value,leavesAlreadyPlanned:leaves,subjects:state().map(o=>({subject:o.n,currentPercent:o.p,classesHeld:o.held,classesLeft:o.rem,mustAttendForLimit:need(o.e,+$("lim").value).ok?need(o.e,+$("lim").value).x:"IMPOSSIBLE"}))});
+  const turns=hist.map((h,k)=>k===0||h.role!=="user"?h:h);
+  turns[turns.length-1]={role:"user",content:`You are the Attendance Advisor for a college student. Dashboard data: ${ctx}\nRules: for ANY what-if math call the simulate_leave tool, never calculate yourself. A sick leave without a certificate is type Absent; with a medical certificate use Medical; on-duty is OD. Days are calendar days (startOffsetDays 0 = today, 1 = tomorrow). Answer briefly with personalised advice, be direct about danger, and say "IRREVERSIBLE DETENTION" if the tool says so. If the student has entered no data, ask for it.\nHistory is limited to this chat. Question: ${q}`};
+  const r=await S(turns,{cache:false,onText:({text})=>{b.textContent=text},tools:[{name:"simulate_leave",description:"Simulate a leave and return the effect on attendance per subject.",inputSchema:{type:"object",properties:{subject:{type:"string",description:"subject name, omit for all"},startOffsetDays:{type:"integer"},days:{type:"integer"},type:{type:"string",enum:["Absent","Medical","OD"]}},required:["days"]},execute:sim}]});
+  reply=r.text;b.textContent=reply;
+ }catch(err){reply=localBot(q);b.textContent=reply}
+ hist.push({role:"assistant",content:reply})};
+["sec","lim","tgt","end","start","hol"].forEach(id=>$(id).oninput=()=>{if(id==="sec")drawTT();calc()});
+drawTT();drawInputs();
+</script></main></body></html>
